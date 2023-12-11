@@ -209,7 +209,7 @@ with tab1:
                 trauma_treat_mean=consult_time,
                 trauma_treat_var=consult_time_sd
                 )
-            await asyncio.sleep(0.1)
+            #await asyncio.sleep(0.1)
             # run multiple replications of experment
             detailed_outputs = multiple_replications(
                 args,
