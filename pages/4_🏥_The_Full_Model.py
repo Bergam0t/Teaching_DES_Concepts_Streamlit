@@ -675,276 +675,276 @@ Only the first replication of the simulation is shown.
 # Create area for exploring all session results
 #################################################
 with tab3:
-if len(st.session_state['session_results']) > 0:
+    if len(st.session_state['session_results']) > 0:
 
-    all_run_results = pd.concat(st.session_state['session_results'])
+        all_run_results = pd.concat(st.session_state['session_results'])
 
-    st.subheader("Look at Average Results Across Replications")
-    # col_a, col_b = st.columns(2)
-    
+        st.subheader("Look at Average Results Across Replications")
+        # col_a, col_b = st.columns(2)
+        
 
-    # with col_a:
-    parameter_scenario_df = all_run_results.groupby('Model Run').median().T.reset_index(drop=False)
-    parameter_scenario_df.columns = [f"Scenario {i}" for i in parameter_scenario_df.columns]
-    parameter_scenario_df = parameter_scenario_df[~parameter_scenario_df['Scenario index'].str.contains("\d", regex=True)]
-    
-    st.dataframe(parameter_scenario_df.set_index(parameter_scenario_df.columns[0]).rename_axis('Parameter', axis=0),
-                    hide_index=False,
-                    use_container_width=True)
-    del parameter_scenario_df
+        # with col_a:
+        parameter_scenario_df = all_run_results.groupby('Model Run').median().T.reset_index(drop=False)
+        parameter_scenario_df.columns = [f"Scenario {i}" for i in parameter_scenario_df.columns]
+        parameter_scenario_df = parameter_scenario_df[~parameter_scenario_df['Scenario index'].str.contains("\d", regex=True)]
+        
+        st.dataframe(parameter_scenario_df.set_index(parameter_scenario_df.columns[0]).rename_axis('Parameter', axis=0),
+                        hide_index=False,
+                        use_container_width=True)
+        del parameter_scenario_df
 
-    scenario_tab_1, scenario_tab_2, scenario_tab_3 = st.tabs([
-        "Simple Metrics", 
-        "Advanced Metrics",
-        "Detailed Breakdown"])
+        scenario_tab_1, scenario_tab_2, scenario_tab_3 = st.tabs([
+            "Simple Metrics", 
+            "Advanced Metrics",
+            "Detailed Breakdown"])
 
-    with scenario_tab_1:
+        with scenario_tab_1:
 
-#             st.write(
-# all_run_results.groupby('Model Run').median().T.reset_index(drop=False).melt(id_vars="index", var_name="model_run"),                    x="variable", 
-#             )
-        col_x, col_y = st.columns(2)
+    #             st.write(
+    # all_run_results.groupby('Model Run').median().T.reset_index(drop=False).melt(id_vars="index", var_name="model_run"),                    x="variable", 
+    #             )
+            col_x, col_y = st.columns(2)
 
-        with col_x:
-            st.subheader("Utilisation")
+            with col_x:
+                st.subheader("Utilisation")
 
-            all_run_util_bar = px.bar(
-                    all_run_results.groupby('Model Run').median().T.filter(like="util", axis=0).reset_index(drop=False).melt(id_vars="index", var_name="model_run"),              
+                all_run_util_bar = px.bar(
+                        all_run_results.groupby('Model Run').median().T.filter(like="util", axis=0).reset_index(drop=False).melt(id_vars="index", var_name="model_run"),              
+                        x="value",
+                        y="index",
+                        barmode='group',
+                        color="model_run",
+                        range_x=[0, 1], 
+                        height=800)
+                
+                all_run_util_bar.add_vrect(x0=0.65, x1=0.85,
+                                            fillcolor="#5DFDA0", opacity=0.25,  line_width=0)
+                # Add extreme range (above)
+                all_run_util_bar.add_vrect(x0=0.85, x1=1,
+                                            fillcolor="#D45E5E", opacity=0.25, line_width=0)
+                # Add suboptimum range (below)
+                all_run_util_bar.add_vrect(x0=0.4, x1=0.65,
+                                            fillcolor="#FDD049", opacity=0.25, line_width=0)
+                # Add extreme range (below)
+                all_run_util_bar.add_vrect(x0=0, x1=0.4,
+                                            fillcolor="#D45E5E", opacity=0.25, line_width=0)
+
+                all_run_util_bar.update_yaxes(labelalias={
+                    "01b_triage_util": "Triage<br>Bays", 
+                    "02b_registration_util": "Registration<br>Cubicles",
+                    "03b_examination_util": "Examination<br>Bays",
+                    "04b_treatment_util(non_trauma)": "Treatment<br>Bays<br>(non-trauma)",
+                    "06b_trauma_util": "Stabilisation<br>Bays",
+                    "07b_treatment_util(trauma)": "Treatment<br>Bays<br>(trauma)"
+                }, tickangle=0, title_text='')
+                all_run_util_bar.update_xaxes(title_text='Resource Utilisation (%)')
+
+                all_run_util_bar.update_layout(xaxis_tickformat = '.0%',
+                                                legend_title_text='Model Run')
+
+                st.plotly_chart(
+                    all_run_util_bar,
+                        use_container_width=True
+                        )
+                
+            with col_y:
+                st.subheader("Waits")
+
+                all_run_wait_bar = px.bar(
+                        all_run_results.groupby('Model Run').median().T.filter(like="wait", axis=0).reset_index(drop=False).melt(id_vars="index", var_name="model_run"),              
+                        x="value",
+                        y="index",
+                        barmode='group',
+                        color="model_run", 
+                        height=800
+                        )
+                
+                all_run_wait_bar.update_yaxes(labelalias={
+                    "01a_triage_wait": "Triage", 
+                    "02a_registration_wait": "Registration",
+                    "03a_examination_wait": "Examination",
+                    "04a_treatment_wait(non_trauma)": "Treatment<br>(non-trauma)",
+                    "06a_trauma_wait": "Stabilisation",
+                    "07a_treatment_wait(trauma)": "Treatment<br>(trauma)"
+                }, tickangle=0, title_text='')
+
+                all_run_wait_bar.update_xaxes(title_text='Wait for Stage (minutes)')
+
+                all_run_wait_bar.update_layout(legend_title_text='Model Run')
+
+                all_run_wait_bar.add_vrect(x0=0, x1=60*2, fillcolor="#5DFDA0", 
+                                            opacity=0.3, line_width=0)
+
+                st.plotly_chart(all_run_wait_bar,
+                        use_container_width=True
+                        )
+        
+        # Repeat but with boxplots instead so variability within model runs can be
+        # better explored
+        with scenario_tab_2:
+
+            col_res_1, col_res_2 = st.columns(2)
+
+            
+
+            with col_res_1:
+                st.subheader("Utilisation")
+
+                all_run_util_box = px.box(
+                    all_run_results.reset_index().melt(id_vars=["Model Run", "rep"]).set_index('variable').filter(like="util", axis=0).reset_index(), 
+                    y="variable", 
                     x="value",
-                    y="index",
-                    barmode='group',
-                    color="model_run",
+                    color="Model Run",
+                    points="all",
                     range_x=[0, 1], 
                     height=800)
-            
-            all_run_util_bar.add_vrect(x0=0.65, x1=0.85,
-                                        fillcolor="#5DFDA0", opacity=0.25,  line_width=0)
-            # Add extreme range (above)
-            all_run_util_bar.add_vrect(x0=0.85, x1=1,
-                                        fillcolor="#D45E5E", opacity=0.25, line_width=0)
-            # Add suboptimum range (below)
-            all_run_util_bar.add_vrect(x0=0.4, x1=0.65,
-                                        fillcolor="#FDD049", opacity=0.25, line_width=0)
-            # Add extreme range (below)
-            all_run_util_bar.add_vrect(x0=0, x1=0.4,
-                                        fillcolor="#D45E5E", opacity=0.25, line_width=0)
 
-            all_run_util_bar.update_yaxes(labelalias={
-                "01b_triage_util": "Triage<br>Bays", 
-                "02b_registration_util": "Registration<br>Cubicles",
-                "03b_examination_util": "Examination<br>Bays",
-                "04b_treatment_util(non_trauma)": "Treatment<br>Bays<br>(non-trauma)",
-                "06b_trauma_util": "Stabilisation<br>Bays",
-                "07b_treatment_util(trauma)": "Treatment<br>Bays<br>(trauma)"
-            }, tickangle=0, title_text='')
-            all_run_util_bar.update_xaxes(title_text='Resource Utilisation (%)')
+                all_run_util_box.add_vrect(x0=0.65, x1=0.85,
+                                            fillcolor="#5DFDA0", opacity=0.25,  line_width=0)
+                # Add extreme range (above)
+                all_run_util_box.add_vrect(x0=0.85, x1=1,
+                                            fillcolor="#D45E5E", opacity=0.25, line_width=0)
+                # Add suboptimum range (below)
+                all_run_util_box.add_vrect(x0=0.4, x1=0.65,
+                                            fillcolor="#FDD049", opacity=0.25, line_width=0)
+                # Add extreme range (below)
+                all_run_util_box.add_vrect(x0=0, x1=0.4,
+                                            fillcolor="#D45E5E", opacity=0.25, line_width=0)
 
-            all_run_util_bar.update_layout(xaxis_tickformat = '.0%',
-                                            legend_title_text='Model Run')
+                all_run_util_box.update_yaxes(labelalias={
+                    "01b_triage_util": "Triage<br>Bays", 
+                    "02b_registration_util": "Registration<br>Cubicles",
+                    "03b_examination_util": "Examination<br>Bays",
+                    "04b_treatment_util(non_trauma)": "Treatment<br>Bays<br>(non-trauma)",
+                    "06b_trauma_util": "Stabilisation<br>Bays",
+                    "07b_treatment_util(trauma)": "Treatment<br>Bays<br>(trauma)"
+                }, tickangle=0, title_text='')
+                all_run_util_box.update_xaxes(title_text='Resource Utilisation (%)')
 
-            st.plotly_chart(
-                all_run_util_bar,
+                all_run_util_box.update_layout(xaxis_tickformat = '.0%',
+                                                legend_title_text='Model Run')
+
+                st.plotly_chart(all_run_util_box,
                     use_container_width=True
                     )
-            
-        with col_y:
-            st.subheader("Waits")
+                
 
-            all_run_wait_bar = px.bar(
-                    all_run_results.groupby('Model Run').median().T.filter(like="wait", axis=0).reset_index(drop=False).melt(id_vars="index", var_name="model_run"),              
+
+
+                # st.write(all_run_results.filter(like="util", axis=1).merge(all_run_results.filter(like="throughput", axis=1),left_index=True,right_index=True))
+                
+            with col_res_2:
+                st.subheader("Waits")
+
+                all_run_wait_box = px.box(
+                    all_run_results.reset_index().melt(id_vars=["Model Run", "rep"]).set_index('variable').filter(like="wait", axis=0).reset_index(), 
+                #                 left_index=True, right_index=True), 
+                    y="variable", 
                     x="value",
-                    y="index",
-                    barmode='group',
-                    color="model_run", 
-                    height=800
-                    )
-            
-            all_run_wait_bar.update_yaxes(labelalias={
-                "01a_triage_wait": "Triage", 
-                "02a_registration_wait": "Registration",
-                "03a_examination_wait": "Examination",
-                "04a_treatment_wait(non_trauma)": "Treatment<br>(non-trauma)",
-                "06a_trauma_wait": "Stabilisation",
-                "07a_treatment_wait(trauma)": "Treatment<br>(trauma)"
-            }, tickangle=0, title_text='')
+                    color="Model Run",
+                    points="all", 
+                    height=800)
+                
+                all_run_wait_box.update_yaxes(labelalias={
+                    "01a_triage_wait": "Triage", 
+                    "02a_registration_wait": "Registration",
+                    "03a_examination_wait": "Examination",
+                    "04a_treatment_wait(non_trauma)": "Treatment<br>(non-trauma)",
+                    "06a_trauma_wait": "Stabilisation",
+                    "07a_treatment_wait(trauma)": "Treatment<br>(trauma)"
+                }, tickangle=0, title_text='')
+                all_run_wait_box.update_xaxes(title_text='Wait for Stage (minutes)')
 
-            all_run_wait_bar.update_xaxes(title_text='Wait for Stage (minutes)')
+                all_run_wait_box.add_vrect(x0=0, x1=60*2, fillcolor="#5DFDA0", 
+                                            opacity=0.3, line_width=0)
+                
+                all_run_wait_box.update_layout(legend_title_text='Model Run')
 
-            all_run_wait_bar.update_layout(legend_title_text='Model Run')
-
-            all_run_wait_bar.add_vrect(x0=0, x1=60*2, fillcolor="#5DFDA0", 
-                                        opacity=0.3, line_width=0)
-
-            st.plotly_chart(all_run_wait_bar,
+                # Add in a box plot showing waits
+                st.plotly_chart(all_run_wait_box,
                     use_container_width=True
                     )
-    
-    # Repeat but with boxplots instead so variability within model runs can be
-    # better explored
-    with scenario_tab_2:
 
-        col_res_1, col_res_2 = st.columns(2)
+            col_res_3, col_res_4 = st.columns(2)
 
-        
-
-        with col_res_1:
-            st.subheader("Utilisation")
-
-            all_run_util_box = px.box(
-                all_run_results.reset_index().melt(id_vars=["Model Run", "rep"]).set_index('variable').filter(like="util", axis=0).reset_index(), 
-                y="variable", 
-                x="value",
-                color="Model Run",
-                points="all",
-                range_x=[0, 1], 
-                height=800)
-
-            all_run_util_box.add_vrect(x0=0.65, x1=0.85,
-                                        fillcolor="#5DFDA0", opacity=0.25,  line_width=0)
-            # Add extreme range (above)
-            all_run_util_box.add_vrect(x0=0.85, x1=1,
-                                        fillcolor="#D45E5E", opacity=0.25, line_width=0)
-            # Add suboptimum range (below)
-            all_run_util_box.add_vrect(x0=0.4, x1=0.65,
-                                        fillcolor="#FDD049", opacity=0.25, line_width=0)
-            # Add extreme range (below)
-            all_run_util_box.add_vrect(x0=0, x1=0.4,
-                                        fillcolor="#D45E5E", opacity=0.25, line_width=0)
-
-            all_run_util_box.update_yaxes(labelalias={
-                "01b_triage_util": "Triage<br>Bays", 
-                "02b_registration_util": "Registration<br>Cubicles",
-                "03b_examination_util": "Examination<br>Bays",
-                "04b_treatment_util(non_trauma)": "Treatment<br>Bays<br>(non-trauma)",
-                "06b_trauma_util": "Stabilisation<br>Bays",
-                "07b_treatment_util(trauma)": "Treatment<br>Bays<br>(trauma)"
-            }, tickangle=0, title_text='')
-            all_run_util_box.update_xaxes(title_text='Resource Utilisation (%)')
-
-            all_run_util_box.update_layout(xaxis_tickformat = '.0%',
-                                            legend_title_text='Model Run')
-
-            st.plotly_chart(all_run_util_box,
-                use_container_width=True
+            with col_res_3:
+                st.subheader("Throughput")
+                st.markdown(
+                    """
+                    This is the percentage of clients who entered the system
+                    who had left by the time the model stopped running.
+                    Higher values are better - low values suggest a big backlog of people getting stuck in the system
+                    for a long time.
+                    """
                 )
-            
+                all_run_results['perc_throughput'] = all_run_results['09_throughput']/all_run_results['00_arrivals']
+
+
+                all_results_throughput_box = px.box(
+                    all_run_results.reset_index().melt(id_vars=["Model Run", "rep"]).set_index('variable').filter(like="perc_throughput", axis=0).reset_index(),  
+                    y="variable", 
+                    x="value",
+                    color="Model Run",
+                    points="all",
+                    height=800)
+                
+                all_results_throughput_box.update_layout(xaxis_tickformat = '.0%',
+                                                            legend_title_text='Model Run')
+                
+                all_run_util_bar.update_yaxes(title_text='',
+                                                labelalias={
+                    "perc_throughout": "Throughput (% of arrivals<br>that exit before model end)"})
+                all_run_util_bar.update_xaxes(title_text='% Throughput')
 
 
 
-            # st.write(all_run_results.filter(like="util", axis=1).merge(all_run_results.filter(like="throughput", axis=1),left_index=True,right_index=True))
-            
-        with col_res_2:
-            st.subheader("Waits")
+                # Add in a box plot showing waits
+                st.plotly_chart(all_results_throughput_box,
+                    use_container_width=True
+                    )
 
-            all_run_wait_box = px.box(
-                all_run_results.reset_index().melt(id_vars=["Model Run", "rep"]).set_index('variable').filter(like="wait", axis=0).reset_index(), 
-            #                 left_index=True, right_index=True), 
-                y="variable", 
-                x="value",
-                color="Model Run",
-                points="all", 
-                height=800)
-            
-            all_run_wait_box.update_yaxes(labelalias={
-                "01a_triage_wait": "Triage", 
-                "02a_registration_wait": "Registration",
-                "03a_examination_wait": "Examination",
-                "04a_treatment_wait(non_trauma)": "Treatment<br>(non-trauma)",
-                "06a_trauma_wait": "Stabilisation",
-                "07a_treatment_wait(trauma)": "Treatment<br>(trauma)"
-            }, tickangle=0, title_text='')
-            all_run_wait_box.update_xaxes(title_text='Wait for Stage (minutes)')
+                # st.write(all_run_results.filter(like="wait", axis=1)
+                #             .merge(all_run_results.filter(like="throughput", axis=1), 
+                #                 left_index=True, right_index=True))
+        with scenario_tab_3:
 
-            all_run_wait_box.add_vrect(x0=0, x1=60*2, fillcolor="#5DFDA0", 
-                                        opacity=0.3, line_width=0)
-            
-            all_run_wait_box.update_layout(legend_title_text='Model Run')
+            # df['Color'] = np.where(
+            #     (df['Set'] == 'Z') & (df['Type'] == 'A'), 'yellow',
+            #   np.where((df['Set'] == 'Z') & (df['Type'] == 'B'), 'blue',
+            #   np.where((df['Type'] == 'B'), 'purple', 'black')))
 
-            # Add in a box plot showing waits
-            st.plotly_chart(all_run_wait_box,
-                use_container_width=True
-                )
 
-        col_res_3, col_res_4 = st.columns(2)
+            st.markdown("This displays the median value for each metric across all model runs per scenario.")
+            import numpy as np
+            output_scenario_df = all_run_results.groupby('Model Run').median().T
+            output_scenario_df = output_scenario_df.reset_index(drop=False).melt(id_vars="index")
+            # st.dataframe(output_scenario_df)
 
-        with col_res_3:
-            st.subheader("Throughput")
-            st.markdown(
-                """
-                This is the percentage of clients who entered the system
-                who had left by the time the model stopped running.
-                Higher values are better - low values suggest a big backlog of people getting stuck in the system
-                for a long time.
-                """
+            output_scenario_df['formatted_value'] =  np.where(
+                output_scenario_df['index'].str.contains("wait|time"), (output_scenario_df['value'].round(1)).astype(str) + " minutes",
+                np.where(output_scenario_df['index'].str.contains("util|perc"), ((output_scenario_df['value']*100).round(1)).astype(str) + "%",
+                np.where(output_scenario_df['index'].str.contains("arrivals|throughput"), (output_scenario_df['value'].astype(int)).astype(str),
+                            output_scenario_df['value']
+                            ))
             )
-            all_run_results['perc_throughput'] = all_run_results['09_throughput']/all_run_results['00_arrivals']
-
-
-            all_results_throughput_box = px.box(
-                all_run_results.reset_index().melt(id_vars=["Model Run", "rep"]).set_index('variable').filter(like="perc_throughput", axis=0).reset_index(),  
-                y="variable", 
-                x="value",
-                color="Model Run",
-                points="all",
-                height=800)
+            output_scenario_df = output_scenario_df.drop(columns=["value"])
+            # st.dataframe(output_scenario_df)
+            output_scenario_df = output_scenario_df.pivot(index="index", columns="Model Run", values="formatted_value").reset_index(drop=False)
+            output_scenario_df.columns = [f"Scenario {i}" for i in output_scenario_df.columns]
+            # st.dataframe(output_scenario_df)
+            output_scenario_df = output_scenario_df[output_scenario_df['Scenario index'].str.contains("\d", regex=True)]
             
-            all_results_throughput_box.update_layout(xaxis_tickformat = '.0%',
-                                                        legend_title_text='Model Run')
-            
-            all_run_util_bar.update_yaxes(title_text='',
-                                            labelalias={
-                "perc_throughout": "Throughput (% of arrivals<br>that exit before model end)"})
-            all_run_util_bar.update_xaxes(title_text='% Throughput')
+            output_scenario_df['Scenario index'] = output_scenario_df['Scenario index'].apply(lambda x: (x.replace('_', ' ')).title())
 
+            st.dataframe(output_scenario_df.set_index(output_scenario_df.columns[0]).rename_axis('Metric', axis=0),
+                        hide_index=False,
+                        use_container_width=True,
+                        height=700)
+            del output_scenario_df
 
+            del all_run_results
+            gc.collect()
+    else:
+        st.markdown("No scenarios yet run. Go to the 'Playground' tab and click 'Run simulation'.")
 
-            # Add in a box plot showing waits
-            st.plotly_chart(all_results_throughput_box,
-                use_container_width=True
-                )
-
-            # st.write(all_run_results.filter(like="wait", axis=1)
-            #             .merge(all_run_results.filter(like="throughput", axis=1), 
-            #                 left_index=True, right_index=True))
-    with scenario_tab_3:
-
-        # df['Color'] = np.where(
-        #     (df['Set'] == 'Z') & (df['Type'] == 'A'), 'yellow',
-        #   np.where((df['Set'] == 'Z') & (df['Type'] == 'B'), 'blue',
-        #   np.where((df['Type'] == 'B'), 'purple', 'black')))
-
-
-        st.markdown("This displays the median value for each metric across all model runs per scenario.")
-        import numpy as np
-        output_scenario_df = all_run_results.groupby('Model Run').median().T
-        output_scenario_df = output_scenario_df.reset_index(drop=False).melt(id_vars="index")
-        # st.dataframe(output_scenario_df)
-
-        output_scenario_df['formatted_value'] =  np.where(
-            output_scenario_df['index'].str.contains("wait|time"), (output_scenario_df['value'].round(1)).astype(str) + " minutes",
-            np.where(output_scenario_df['index'].str.contains("util|perc"), ((output_scenario_df['value']*100).round(1)).astype(str) + "%",
-            np.where(output_scenario_df['index'].str.contains("arrivals|throughput"), (output_scenario_df['value'].astype(int)).astype(str),
-                        output_scenario_df['value']
-                        ))
-        )
-        output_scenario_df = output_scenario_df.drop(columns=["value"])
-        # st.dataframe(output_scenario_df)
-        output_scenario_df = output_scenario_df.pivot(index="index", columns="Model Run", values="formatted_value").reset_index(drop=False)
-        output_scenario_df.columns = [f"Scenario {i}" for i in output_scenario_df.columns]
-        # st.dataframe(output_scenario_df)
-        output_scenario_df = output_scenario_df[output_scenario_df['Scenario index'].str.contains("\d", regex=True)]
-        
-        output_scenario_df['Scenario index'] = output_scenario_df['Scenario index'].apply(lambda x: (x.replace('_', ' ')).title())
-
-        st.dataframe(output_scenario_df.set_index(output_scenario_df.columns[0]).rename_axis('Metric', axis=0),
-                    hide_index=False,
-                    use_container_width=True,
-                    height=700)
-        del output_scenario_df
-
-        del all_run_results
-        gc.collect()
-else:
-    st.markdown("No scenarios yet run. Go to the 'Playground' tab and click 'Run simulation'.")
-
-gc.collect()
+    gc.collect()
