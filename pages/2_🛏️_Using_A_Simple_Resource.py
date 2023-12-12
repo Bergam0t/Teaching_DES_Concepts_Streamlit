@@ -240,329 +240,329 @@ with tab1:
         del full_event_log
         gc.collect()
 
-# if button_run_pressed:
-tab1, tab2, tab3 = st.tabs(
-        ["Animated Log", "Simple Graphs", "Advanced Graphs"]
-    )  
+    # if button_run_pressed:
+    tab1, tab2, tab3 = st.tabs(
+            ["Animated Log", "Simple Graphs", "Advanced Graphs"]
+        )  
 
-#     st.markdown("""
-# You can click on the three tabs below ("Animated Log", "Simple Graphs", and "Advanced Graphs") to view different outputs from the model.
-#                 """)
+    #     st.markdown("""
+    # You can click on the three tabs below ("Animated Log", "Simple Graphs", and "Advanced Graphs") to view different outputs from the model.
+    #                 """)
 
 
-with tab1:
-    # st.write(results)
-    st.subheader("Animated Model Output")
-    with st.spinner('Generating the animated patient log...'):
+    with tab1:
+        # st.write(results)
+        st.subheader("Animated Model Output")
+        with st.spinner('Generating the animated patient log...'):
 
-        event_position_df = pd.DataFrame([
-                    {'event': 'arrival', 'x':  50, 'y': 300, 'label': "Arrival" },
+            event_position_df = pd.DataFrame([
+                        {'event': 'arrival', 'x':  50, 'y': 300, 'label': "Arrival" },
+                        
+                        # Triage - minor and trauma                
+                        {'event': 'treatment_wait_begins', 'x':  190, 'y': 170, 'label': "Waiting for Treatment"  },
+                        {'event': 'treatment_begins', 'x':  190, 'y': 110, 'resource':'n_cubicles_1', 'label': "Being Treated" },
+
+                        {'event': 'exit', 
+                        'x':  270, 'y': 70, 'label': "Exit"}
                     
-                    # Triage - minor and trauma                
-                    {'event': 'treatment_wait_begins', 'x':  190, 'y': 170, 'label': "Waiting for Treatment"  },
-                    {'event': 'treatment_begins', 'x':  190, 'y': 110, 'resource':'n_cubicles_1', 'label': "Being Treated" },
+                    ])
 
-                    {'event': 'exit', 
-                    'x':  270, 'y': 70, 'label': "Exit"}
+            st.markdown(
+    """
+    The plot below shows a snapshot every 5 minutes of the position of everyone in our emergency department model. 
+
+    The buttons to the left of the slider below the plot can be used to start and stop the animation. 
+
+    Clicking on the bar below the plot and dragging your cursor to the left or right allows you to rapidly jump through to a different time in the simulation. 
+
+    Only the first replication of the simulation is shown. 
+    """
+            )
+
+            st.plotly_chart(animate_activity_log(
+                                full_patient_df=animation_dfs_log[animation_dfs_log["minute"]<=60*24*5],
+                                event_position_df = event_position_df,
+                                scenario=args,
+                                include_play_button=True,
+                                return_df_only=False,
+                                plotly_height=700,
+                                plotly_width=1200,
+                                override_x_max=300,
+                                override_y_max=500,
+                                wrap_queues_at=10,
+                                time_display_units="dhm",
+                                display_stage_labels=False,
+                                add_background_image="https://raw.githubusercontent.com/hsma-programme/Teaching_DES_Concepts_Streamlit/main/resources/Simplest%20Model%20Background%20Image%20-%20Horizontal%20Layout.drawio.png",
+
+                        ), use_container_width=False,
+                            config = {'displayModeBar': False})
+            
+            del animation_dfs_log
+            gc.collect()
+
+    with tab2:
+        in_range_util = sum((results.mean().filter(like="util")<0.85) & (results.mean().filter(like="util") > 0.65))
+        in_range_wait = sum((results.mean().filter(like="wait")<120))            
+
+        col_res_a, col_res_b = st.columns([1,1])
+
+        with col_res_a:
+            st.metric(label=":bed: **Utilisation Metrics in Ideal Range**", value="{} of {}".format(in_range_util, len(results.mean().filter(like="util"))))
+
+            #util_fig_simple = px.bar(results.mean().filter(like="util"), opacity=0.5)
+            st.markdown(
+                """
+                The emergency department wants to aim for an average of 65% to 85% utilisation across all resources in the emergency department. 
+                The green box shows this ideal range. If the bars overlap with the green box, utilisation is ideal. 
                 
-                ])
+                If utilisation is below this, you might want to **reduce** the number of those resources available. 
+                
+                If utilisation is above this point, you may want to **increase** the number of that type of resource available.
+                """
+            )
+            util_fig_simple = go.Figure()
+            # Add optimum range
+            util_fig_simple.add_hrect(y0=0.65, y1=0.85,
+                                        fillcolor="#5DFDA0", opacity=0.25,  line_width=0)
+            # Add extreme range (above)
+            util_fig_simple.add_hrect(y0=0.85, y1=1,
+                                        fillcolor="#D45E5E", opacity=0.25, line_width=0)
+            # Add suboptimum range (below)
+            util_fig_simple.add_hrect(y0=0.4, y1=0.65,
+                                        fillcolor="#FDD049", opacity=0.25, line_width=0)
+            # Add extreme range (below)
+            util_fig_simple.add_hrect(y0=0, y1=0.4,
+                                        fillcolor="#D45E5E", opacity=0.25, line_width=0)
 
-        st.markdown(
-"""
-The plot below shows a snapshot every 5 minutes of the position of everyone in our emergency department model. 
+            util_fig_simple.add_bar(x=results.mean().filter(like="util").index.tolist(),
+                                    y=results.mean().filter(like="util").tolist())
 
-The buttons to the left of the slider below the plot can be used to start and stop the animation. 
-
-Clicking on the bar below the plot and dragging your cursor to the left or right allows you to rapidly jump through to a different time in the simulation. 
-
-Only the first replication of the simulation is shown. 
-"""
-        )
-
-        st.plotly_chart(animate_activity_log(
-                            full_patient_df=animation_dfs_log[animation_dfs_log["minute"]<=60*24*5],
-                            event_position_df = event_position_df,
-                            scenario=args,
-                            include_play_button=True,
-                            return_df_only=False,
-                            plotly_height=700,
-                            plotly_width=1200,
-                            override_x_max=300,
-                            override_y_max=500,
-                            wrap_queues_at=10,
-                            time_display_units="dhm",
-                            display_stage_labels=False,
-                            add_background_image="https://raw.githubusercontent.com/hsma-programme/Teaching_DES_Concepts_Streamlit/main/resources/Simplest%20Model%20Background%20Image%20-%20Horizontal%20Layout.drawio.png",
-
-                    ), use_container_width=False,
-                        config = {'displayModeBar': False})
-        
-        del animation_dfs_log
-        gc.collect()
-
-with tab2:
-    in_range_util = sum((results.mean().filter(like="util")<0.85) & (results.mean().filter(like="util") > 0.65))
-    in_range_wait = sum((results.mean().filter(like="wait")<120))            
-
-    col_res_a, col_res_b = st.columns([1,1])
-
-    with col_res_a:
-        st.metric(label=":bed: **Utilisation Metrics in Ideal Range**", value="{} of {}".format(in_range_util, len(results.mean().filter(like="util"))))
-
-        #util_fig_simple = px.bar(results.mean().filter(like="util"), opacity=0.5)
-        st.markdown(
-            """
-            The emergency department wants to aim for an average of 65% to 85% utilisation across all resources in the emergency department. 
-            The green box shows this ideal range. If the bars overlap with the green box, utilisation is ideal. 
+            util_fig_simple.update_layout(yaxis_tickformat = '.3%')
+            util_fig_simple.update_yaxes(title_text='Resource Utilisation (%)',
+                                            range=[-0.05, 1.1])
+            # util_fig_simple.data = util_fig_simple.data[::-1]
+            util_fig_simple.update_xaxes(labelalias={
+                "01b_treatment_util": "Treatment Bays", 
+            }, tickangle=0)
             
-            If utilisation is below this, you might want to **reduce** the number of those resources available. 
-            
-            If utilisation is above this point, you may want to **increase** the number of that type of resource available.
-            """
-        )
-        util_fig_simple = go.Figure()
-        # Add optimum range
-        util_fig_simple.add_hrect(y0=0.65, y1=0.85,
-                                    fillcolor="#5DFDA0", opacity=0.25,  line_width=0)
-        # Add extreme range (above)
-        util_fig_simple.add_hrect(y0=0.85, y1=1,
-                                    fillcolor="#D45E5E", opacity=0.25, line_width=0)
-        # Add suboptimum range (below)
-        util_fig_simple.add_hrect(y0=0.4, y1=0.65,
-                                    fillcolor="#FDD049", opacity=0.25, line_width=0)
-        # Add extreme range (below)
-        util_fig_simple.add_hrect(y0=0, y1=0.4,
-                                    fillcolor="#D45E5E", opacity=0.25, line_width=0)
-
-        util_fig_simple.add_bar(x=results.mean().filter(like="util").index.tolist(),
-                                y=results.mean().filter(like="util").tolist())
-
-        util_fig_simple.update_layout(yaxis_tickformat = '.3%')
-        util_fig_simple.update_yaxes(title_text='Resource Utilisation (%)',
-                                        range=[-0.05, 1.1])
-        # util_fig_simple.data = util_fig_simple.data[::-1]
-        util_fig_simple.update_xaxes(labelalias={
-            "01b_treatment_util": "Treatment Bays", 
-        }, tickangle=0)
-        
-        util_fig_simple.update_layout(margin=dict(l=0, r=0, t=0, b=0), 
-                                        yaxis_tickformat = '.0%')
-
-        st.plotly_chart(
-            util_fig_simple,
-            use_container_width=True,
-            config = {'displayModeBar': False}
-        )
-
-    
-    with col_res_b:
-        #util_fig_simple = px.bar(results.mean().filter(like="wait"), opacity=0.5)
-        st.metric(label=":clock2: **Wait Metrics in Ideal Range**", value="{} of {}".format(in_range_wait, len(results.mean().filter(like="01b"))))
-
-        st.markdown(
-            """
-            The emergency department wants to ensure people wait no longer than 2 hours (120 minutes) to be seen.
-            This needs to be balanced with the utilisation graphs on the left.
-            
-            The green box shows waits of less than two hours. If the bars fall within this range, the number of resources does not need to be changed.
-            """
-        )
-
-        wait_fig_simple = go.Figure()
-        wait_fig_simple.add_hrect(y0=0, y1=60*2, fillcolor="#5DFDA0", 
-                                    opacity=0.3, line_width=0)
-        
-        wait_fig_simple.add_bar(x=results.mean().filter(like="01a").index.tolist(),
-                                y=results.mean().filter(like="01a").tolist())
-
-        wait_fig_simple.update_xaxes(labelalias={
-            "01a_treatment_wait": "Treatment"
-        }, tickangle=0)
-        # wait_fig_simple.data = wait_fig_simple.data[::-1]
-        wait_fig_simple.update_yaxes(title_text='Wait for Treatment Stage (Minutes)')
-
-        wait_fig_simple.update_layout(margin=dict(l=0, r=0, t=0, b=0))
-
-        st.plotly_chart(
-            wait_fig_simple,
-            use_container_width=True,
-            config = {'displayModeBar': False}
-        )
-
-    col_res_c, col_res_d = st.columns(2)
-
-    with col_res_c:
-        #util_fig_simple = px.bar(results.mean().filter(like="wait"), opacity=0.5)
-        st.metric(label=":clock2: **Wait Target Met**", value="{} of {}".format(in_range_wait, len(results.mean().filter(like="01c"))))
-
-        st.markdown(
-            """
-            The emergency department wants to ensure people wait no longer than 2 hours (120 minutes) to be seen.
-            This needs to be balanced with the utilisation graphs on the left.
-            
-            The green box shows waits of less than two hours. If the bars fall within this range, the number of resources does not need to be changed.
-            """
-        )
-
-        wait_target_simple = go.Figure()
-        wait_target_simple.add_hrect(y0=0.85, y1=1, fillcolor="#5DFDA0", 
-                                    opacity=0.3, line_width=0)
-        
-        wait_target_simple.add_bar(x=results.median().filter(like="01c").index.tolist(),
-                                y=results.median().filter(like="01c").tolist())
-
-        wait_target_simple.update_xaxes(labelalias={
-            "01c_treatment_wait_target_met": "Treatment Wait - Target Met" 
-        }, tickangle=0)
-        # wait_fig_simple.data = wait_fig_simple.data[::-1]
-        wait_target_simple.update_yaxes(title_text='Average % of patients where 2 hour wait target met')
-
-        wait_target_simple.update_layout(margin=dict(l=0, r=0, t=0, b=0), 
+            util_fig_simple.update_layout(margin=dict(l=0, r=0, t=0, b=0), 
                                             yaxis_tickformat = '.0%')
 
-        st.plotly_chart(
-            wait_target_simple,
-            use_container_width=True,
-            config = {'displayModeBar': False}
-        )
-
-
-        # st.write(results)
-with tab3:
-
-    st.markdown(
-    """
-    We can use **box plots** to help us understand the variation in each result during a model run. 
-    
-    Because of the variation in the patterns of arrivals, as well as the variation in the length of consultations, we may find that sometimes model runs fall within our desired ranges but other times, despite the parameters being the same, they don't. 
-
-    This gives us a better idea of how likely a redesigned system is to meet the targets.
-    """
-    )
-
-    st.markdown("""
-                ### Utilisation
-                """)
-    util_box = px.box(
-            results.reset_index().melt(id_vars=["rep"]).set_index('variable').filter(like="util", axis=0).reset_index(), 
-            y="variable", 
-            x="value",
-            points="all",
-            range_x=[0, 1.1],
-            height=200)
-    
-    util_box.update_layout(yaxis_title="", 
-                            xaxis_title="Average Utilisation in Model Run", 
-                            xaxis_tickformat = '.0%')
-
-    util_box.add_vrect(x0=0.65, x1=0.85,
-                                    fillcolor="#5DFDA0", opacity=0.25,  line_width=0)
-    # Add extreme range (above)
-    util_box.add_vrect(x0=0.85, x1=1,
-                                fillcolor="#D45E5E", opacity=0.25, line_width=0)
-    # Add suboptimum range (below)
-    util_box.add_vrect(x0=0.4, x1=0.65,
-                                fillcolor="#FDD049", opacity=0.25, line_width=0)
-    # Add extreme range (below)
-    util_box.add_vrect(x0=0, x1=0.4,
-                                fillcolor="#D45E5E", opacity=0.25, line_width=0)
-
-    util_box.update_yaxes(labelalias={
-        "01b_treatment_util": "Treatment<br>Bays"
-    }, tickangle=0)
-
-
-
-    st.plotly_chart(util_box,
-            use_container_width=True
-        )
-        
-
-    st.markdown("""
-                ### Waits
-                """)
-    wait_box = px.box(
-            results.reset_index().melt(id_vars=["rep"]).set_index('variable').filter(like="01a", axis=0).reset_index(), 
-            y="variable", 
-            x="value",
-            points="all",
-            height=200,
-            range_x=[0, results.reset_index().melt(id_vars=["rep"]).set_index('variable').filter(like="01a", axis=0).reset_index().max().value]
+            st.plotly_chart(
+                util_fig_simple,
+                use_container_width=True,
+                config = {'displayModeBar': False}
             )
-    wait_box.update_layout(yaxis_title="", 
-                            xaxis_title="Average Wait in Model Run")
 
-    wait_box.update_yaxes(labelalias={
-            "01a_treatment_wait": "Treatment Wait"
+        
+        with col_res_b:
+            #util_fig_simple = px.bar(results.mean().filter(like="wait"), opacity=0.5)
+            st.metric(label=":clock2: **Wait Metrics in Ideal Range**", value="{} of {}".format(in_range_wait, len(results.mean().filter(like="01b"))))
+
+            st.markdown(
+                """
+                The emergency department wants to ensure people wait no longer than 2 hours (120 minutes) to be seen.
+                This needs to be balanced with the utilisation graphs on the left.
+                
+                The green box shows waits of less than two hours. If the bars fall within this range, the number of resources does not need to be changed.
+                """
+            )
+
+            wait_fig_simple = go.Figure()
+            wait_fig_simple.add_hrect(y0=0, y1=60*2, fillcolor="#5DFDA0", 
+                                        opacity=0.3, line_width=0)
+            
+            wait_fig_simple.add_bar(x=results.mean().filter(like="01a").index.tolist(),
+                                    y=results.mean().filter(like="01a").tolist())
+
+            wait_fig_simple.update_xaxes(labelalias={
+                "01a_treatment_wait": "Treatment"
+            }, tickangle=0)
+            # wait_fig_simple.data = wait_fig_simple.data[::-1]
+            wait_fig_simple.update_yaxes(title_text='Wait for Treatment Stage (Minutes)')
+
+            wait_fig_simple.update_layout(margin=dict(l=0, r=0, t=0, b=0))
+
+            st.plotly_chart(
+                wait_fig_simple,
+                use_container_width=True,
+                config = {'displayModeBar': False}
+            )
+
+        col_res_c, col_res_d = st.columns(2)
+
+        with col_res_c:
+            #util_fig_simple = px.bar(results.mean().filter(like="wait"), opacity=0.5)
+            st.metric(label=":clock2: **Wait Target Met**", value="{} of {}".format(in_range_wait, len(results.mean().filter(like="01c"))))
+
+            st.markdown(
+                """
+                The emergency department wants to ensure people wait no longer than 2 hours (120 minutes) to be seen.
+                This needs to be balanced with the utilisation graphs on the left.
+                
+                The green box shows waits of less than two hours. If the bars fall within this range, the number of resources does not need to be changed.
+                """
+            )
+
+            wait_target_simple = go.Figure()
+            wait_target_simple.add_hrect(y0=0.85, y1=1, fillcolor="#5DFDA0", 
+                                        opacity=0.3, line_width=0)
+            
+            wait_target_simple.add_bar(x=results.median().filter(like="01c").index.tolist(),
+                                    y=results.median().filter(like="01c").tolist())
+
+            wait_target_simple.update_xaxes(labelalias={
+                "01c_treatment_wait_target_met": "Treatment Wait - Target Met" 
+            }, tickangle=0)
+            # wait_fig_simple.data = wait_fig_simple.data[::-1]
+            wait_target_simple.update_yaxes(title_text='Average % of patients where 2 hour wait target met')
+
+            wait_target_simple.update_layout(margin=dict(l=0, r=0, t=0, b=0), 
+                                                yaxis_tickformat = '.0%')
+
+            st.plotly_chart(
+                wait_target_simple,
+                use_container_width=True,
+                config = {'displayModeBar': False}
+            )
+
+
+            # st.write(results)
+    with tab3:
+
+        st.markdown(
+        """
+        We can use **box plots** to help us understand the variation in each result during a model run. 
+        
+        Because of the variation in the patterns of arrivals, as well as the variation in the length of consultations, we may find that sometimes model runs fall within our desired ranges but other times, despite the parameters being the same, they don't. 
+
+        This gives us a better idea of how likely a redesigned system is to meet the targets.
+        """
+        )
+
+        st.markdown("""
+                    ### Utilisation
+                    """)
+        util_box = px.box(
+                results.reset_index().melt(id_vars=["rep"]).set_index('variable').filter(like="util", axis=0).reset_index(), 
+                y="variable", 
+                x="value",
+                points="all",
+                range_x=[0, 1.1],
+                height=200)
+        
+        util_box.update_layout(yaxis_title="", 
+                                xaxis_title="Average Utilisation in Model Run", 
+                                xaxis_tickformat = '.0%')
+
+        util_box.add_vrect(x0=0.65, x1=0.85,
+                                        fillcolor="#5DFDA0", opacity=0.25,  line_width=0)
+        # Add extreme range (above)
+        util_box.add_vrect(x0=0.85, x1=1,
+                                    fillcolor="#D45E5E", opacity=0.25, line_width=0)
+        # Add suboptimum range (below)
+        util_box.add_vrect(x0=0.4, x1=0.65,
+                                    fillcolor="#FDD049", opacity=0.25, line_width=0)
+        # Add extreme range (below)
+        util_box.add_vrect(x0=0, x1=0.4,
+                                    fillcolor="#D45E5E", opacity=0.25, line_width=0)
+
+        util_box.update_yaxes(labelalias={
+            "01b_treatment_util": "Treatment<br>Bays"
         }, tickangle=0)
 
-    wait_box.add_vrect(x0=0, x1=60*2, fillcolor="#5DFDA0", 
-                                    opacity=0.3, line_width=0)
 
-    st.plotly_chart(wait_box,
-            use_container_width=True
-        )
 
-    st.markdown("""
-                ### Wait Targets
-                This is the percentage of clients who met the 2 hour wait target.
-                """)
-
-    wait_target_box = px.box(
-            results.reset_index().melt(id_vars=["rep"]).set_index('variable').filter(like="1c", axis=0).reset_index(), 
-            y="variable", 
-            x="value",
-            points="all",
-            height=200,
-            range_x=[0, 1.1]
+        st.plotly_chart(util_box,
+                use_container_width=True
             )
-    
-    wait_target_box.update_layout(yaxis_title="", 
-                                    xaxis_title="% of clients meeting waiting time target", 
-                                    xaxis_tickformat = '.0%')
+            
 
-    wait_target_box.update_yaxes(labelalias={
-        "01c_treatment_wait_target_met": "Waiting Time Target<br>(% met)"
-    }, tickangle=0)
+        st.markdown("""
+                    ### Waits
+                    """)
+        wait_box = px.box(
+                results.reset_index().melt(id_vars=["rep"]).set_index('variable').filter(like="01a", axis=0).reset_index(), 
+                y="variable", 
+                x="value",
+                points="all",
+                height=200,
+                range_x=[0, results.reset_index().melt(id_vars=["rep"]).set_index('variable').filter(like="01a", axis=0).reset_index().max().value]
+                )
+        wait_box.update_layout(yaxis_title="", 
+                                xaxis_title="Average Wait in Model Run")
 
+        wait_box.update_yaxes(labelalias={
+                "01a_treatment_wait": "Treatment Wait"
+            }, tickangle=0)
 
-    st.plotly_chart(wait_target_box,
-            use_container_width=True
-        )
-    
-    
-    st.markdown("""
-                ### Throughput
-                This is the percentage of clients who entered the system who had left by the time the model stopped running.
-                Higher values are better - low values suggest a big backlog of people getting stuck in the system for a long time.
-                
-                Note that this isn't a good metric to compare across different lengths of model run, but can be useful to consider for the same length of run with different parameters.
-                """)
-    
-    results['perc_throughput'] = results['09_throughput']/results['00_arrivals']
-    throughput_box = px.box(
-            results.reset_index().melt(id_vars=["rep"]).set_index('variable').filter(like="perc_throughput", axis=0).reset_index(), 
-            y="variable", 
-            x="value",
-            points="all",
-            height=200,
-            range_x=[0, 1.1]
+        wait_box.add_vrect(x0=0, x1=60*2, fillcolor="#5DFDA0", 
+                                        opacity=0.3, line_width=0)
+
+        st.plotly_chart(wait_box,
+                use_container_width=True
             )
-    
-    throughput_box.update_layout(yaxis_title="", 
-                                    xaxis_title="% Throughput in Model Run", 
-                                    xaxis_tickformat = '.0%')
 
-    throughput_box.update_yaxes(labelalias={
-        "perc_throughput": "Throughput (%)"
-    }, tickangle=0)
+        st.markdown("""
+                    ### Wait Targets
+                    This is the percentage of clients who met the 2 hour wait target.
+                    """)
+
+        wait_target_box = px.box(
+                results.reset_index().melt(id_vars=["rep"]).set_index('variable').filter(like="1c", axis=0).reset_index(), 
+                y="variable", 
+                x="value",
+                points="all",
+                height=200,
+                range_x=[0, 1.1]
+                )
+        
+        wait_target_box.update_layout(yaxis_title="", 
+                                        xaxis_title="% of clients meeting waiting time target", 
+                                        xaxis_tickformat = '.0%')
+
+        wait_target_box.update_yaxes(labelalias={
+            "01c_treatment_wait_target_met": "Waiting Time Target<br>(% met)"
+        }, tickangle=0)
 
 
-    st.plotly_chart(throughput_box,
-            use_container_width=True
-        )
-    
-    del results
-    gc.collect()
+        st.plotly_chart(wait_target_box,
+                use_container_width=True
+            )
+        
+        
+        st.markdown("""
+                    ### Throughput
+                    This is the percentage of clients who entered the system who had left by the time the model stopped running.
+                    Higher values are better - low values suggest a big backlog of people getting stuck in the system for a long time.
+                    
+                    Note that this isn't a good metric to compare across different lengths of model run, but can be useful to consider for the same length of run with different parameters.
+                    """)
+        
+        results['perc_throughput'] = results['09_throughput']/results['00_arrivals']
+        throughput_box = px.box(
+                results.reset_index().melt(id_vars=["rep"]).set_index('variable').filter(like="perc_throughput", axis=0).reset_index(), 
+                y="variable", 
+                x="value",
+                points="all",
+                height=200,
+                range_x=[0, 1.1]
+                )
+        
+        throughput_box.update_layout(yaxis_title="", 
+                                        xaxis_title="% Throughput in Model Run", 
+                                        xaxis_tickformat = '.0%')
 
-    # st.write(full_event_log)
+        throughput_box.update_yaxes(labelalias={
+            "perc_throughput": "Throughput (%)"
+        }, tickangle=0)
+
+
+        st.plotly_chart(throughput_box,
+                use_container_width=True
+            )
+        
+        del results
+        gc.collect()
+
+        # st.write(full_event_log)
